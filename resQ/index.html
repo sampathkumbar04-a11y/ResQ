@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResQNet - Offline Disaster Coordination System</title>
+    <meta name="description" content="Offline-first disaster management coordination system.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+
+    <!-- Icons (Lucide) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- QR Code Library (Removed) -->
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body>
+
+    <!-- Offline Banner -->
+    <div id="offline-banner" class="offline-banner hidden">
+        <i data-lucide="wifi-off"></i>
+        <span>You are offline. Data is saved locally and will sync when connected.</span>
+    </div>
+
+    <!-- Alert Banner (for Citizens) -->
+    <div id="alert-banner" class="alert-banner hidden">
+        <div class="alert-content">
+            <i data-lucide="alert-triangle"></i>
+            <span id="alert-message-text">Emergency Broadcast!</span>
+        </div>
+        <button id="close-alert-btn" class="icon-btn"><i data-lucide="x"></i></button>
+    </div>
+
+    <!-- App Container -->
+    <main id="app-container">
+
+        <!-- ================= LOGIN VIEW ================= -->
+        <section id="view-login" class="view active">
+            <div class="login-container">
+                <div class="logo-wrapper">
+                    <div class="logo-icon" style="margin: 0 auto 10px; text-align: center;"><img src="assets/logo.jpg"
+                            alt="ResQ Logo"
+                            style="width: 80px; height: 80px; border-radius: 50%; box-shadow: var(--shadow-sm);"></div>
+                    <h1>ResQ</h1>
+                    <p>Disaster Coordination System</p>
+                </div>
+
+                <div class="role-tabs">
+                    <button class="tab-btn active" data-tab="citizen">Citizen</button>
+                    <button class="tab-btn" data-tab="admin">Rescue Team</button>
+                </div>
+
+                <div class="form-container">
+                    <!-- Citizen Login Form -->
+                    <form id="citizen-login-form" class="auth-form active">
+                        <div class="input-group">
+                            <label for="citizen-name">Username</label>
+                            <div class="input-with-icon">
+                                <i data-lucide="user"></i>
+                                <input type="text" id="citizen-name" placeholder="Enter username" required>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="citizen-phone">Phone Number</label>
+                            <div class="input-with-icon">
+                                <i data-lucide="phone"></i>
+                                <input type="tel" id="citizen-phone" placeholder="Enter number" required>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="citizen-pass">Password</label>
+                            <div class="input-with-icon">
+                                <i data-lucide="lock"></i>
+                                <input type="password" id="citizen-pass" placeholder="••••••••" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-full">Login as Citizen</button>
+
+                        <div class="login-footer"
+                            style="text-align:center; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                            <p class="small-text">For immediate assistance without login:</p>
+                            <a href="tel:108" class="btn btn-outline w-full mt-2"
+                                style="font-weight: 700; font-size: 1.1rem; color: var(--status-critical); border-color: var(--status-critical); background: var(--status-critical-bg);"><i
+                                    data-lucide="phone-call"></i> Toll-Free SOS (108)</a>
+                        </div>
+                    </form>
+
+                    <!-- Admin Login Form -->
+                    <form id="admin-login-form" class="auth-form hidden">
+                        <div class="input-group">
+                            <label for="admin-id">Responder ID / Badge</label>
+                            <div class="input-with-icon">
+                                <i data-lucide="badge"></i>
+                                <input type="text" id="admin-id" placeholder="RT-001" required>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="admin-pass">Password</label>
+                            <div class="input-with-icon">
+                                <i data-lucide="lock"></i>
+                                <input type="password" id="admin-pass" placeholder="••••••••" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-secondary w-full">Login as Rescue Team</button>
+                    </form>
+                </div>
+
+            </div>
+            </div>
+        </section>
+
+        <!-- ================= CITIZEN VIEW ================= -->
+        <section id="view-citizen" class="view hidden">
+            <header class="app-header">
+                <div class="header-left">
+                    <div class="logo-icon-small" style="margin-right: 10px;"><img src="assets/logo.jpg" alt="ResQ Logo"
+                            style="width: 32px; height: 32px; border-radius: 50%;"></div>
+                    <h2>ResQ <span class="badge">Citizen</span></h2>
+                </div>
+                <div class="header-right">
+                    <span id="citizen-user-display" class="user-name">User</span>
+                    <span id="citizen-phone-display" class="user-name"
+                        style="color: var(--text-muted); font-size: 0.85rem;"></span>
+                    <button class="logout-btn" id="citizen-logout" title="Logout"><i data-lucide="log-out"></i></button>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+                <div class="dashboard-grid citizen-grid">
+
+                    <!-- Help Request Form -->
+                    <div class="card form-card">
+                        <div class="card-header">
+                            <h3><i data-lucide="life-buoy"></i> Request Help</h3>
+                            <p>Submit an emergency request to the nearest rescue team.</p>
+                        </div>
+                        <form id="help-request-form">
+                            <div class="input-group">
+                                <label for="req-name">Name</label>
+                                <input type="text" id="req-name" readonly class="readonly-input">
+                            </div>
+
+                            <div class="input-group location-group">
+                                <label for="req-location">Location</label>
+                                <div class="location-input-wrapper">
+                                    <input type="text" id="req-location" placeholder="Address or Coordinates" required>
+                                    <button type="button" id="btn-get-location" class="btn btn-outline" title="Use GPS">
+                                        <i data-lucide="map-pin"></i> GPS
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="input-group row-group">
+                                <div class="half-width" style="width: 50%;">
+                                    <label for="req-type">Emergency Type</label>
+                                    <select id="req-type" required style="width: 100%;">
+                                        <option value="" disabled selected>Select type</option>
+                                        <option value="medical">Medical</option>
+                                        <option value="fire">Fire</option>
+                                        <option value="rescue">Evacuation/Rescue</option>
+                                        <option value="food">Food & Water</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="half-width" style="width: 50%;" id="condition-container">
+                                    <label for="req-condition">Condition / Details</label>
+                                    <select id="req-condition" required style="width: 100%;">
+                                        <option value="" disabled selected>Select emergency type first</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <label for="req-people">Number of People Affected</label>
+                                <div class="input-with-icon">
+                                    <i data-lucide="users"></i>
+                                    <input type="number" id="req-people" placeholder="E.g. 1, 5, 10..." min="1"
+                                        required>
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-danger w-full btn-large">
+                                    <i data-lucide="send"></i> Submit Emergency Request
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Sidebar actions -->
+                    <div class="citizen-sidebar">
+
+                        <!-- Instant SOS Card -->
+                        <div class="card sos-card"
+                            style="margin-bottom: 1.5rem; background: #fee2e2; border-color: #fca5a5;">
+                            <div class="card-header" style="text-align: center; margin-bottom: 0.5rem;">
+                                <h3 style="color: var(--status-critical); justify-content: center;"><i
+                                        data-lucide="alert-triangle"></i> TOLL-FREE SOS</h3>
+                                <p class="small-text mt-2" style="color: #991b1b;">Calls 108 & sends an instant digital
+                                    alert.</p>
+                            </div>
+                            <button id="btn-sos-alert" class="btn btn-danger w-full btn-large"
+                                style="animation: pulse 2s infinite; font-size: 1.1rem; gap: 0.3rem;">
+                                <i data-lucide="phone"></i> CALL & ALERT
+                            </button>
+                        </div>
+
+                        <!-- SMS Fallback Card -->
+                        <div class="card sms-card highlight-card">
+                            <div class="card-header">
+                                <h3><i data-lucide="message-square"></i> SMS Fallback</h3>
+                                <p>No internet? Use SMS to send your request.</p>
+                            </div>
+                            <a id="btn-sms-fallback" href="#" class="btn btn-secondary w-full">
+                                <i data-lucide="smartphone"></i> Send SMS Request
+                            </a>
+                            <p class="small-text mt-2">Opens your messaging app with a pre-filled emergency template.
+                            </p>
+                        </div>
+
+                        <!-- My Requests & QR -->
+                        <div class="card my-requests-card">
+                            <div class="card-header">
+                                <h3><i data-lucide="list"></i> My Recent Request</h3>
+                            </div>
+                            <div id="active-request-container" class="empty-state">
+                                <p>No active requests.</p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= ADMIN/RESCUE VIEW ================= -->
+        <section id="view-admin" class="view hidden">
+            <header class="app-header admin-header">
+                <div class="header-left">
+                    <div class="logo-icon-small" style="margin-right: 10px;"><img src="assets/logo.jpg" alt="ResQ Logo"
+                            style="width: 32px; height: 32px; border-radius: 50%;"></div>
+                    <h2>ResQ <span class="badge admin-badge">Rescue Team Dashboard</span></h2>
+                </div>
+                <div class="header-right">
+                    <div class="sync-status">
+                        <i data-lucide="refresh-cw" id="sync-icon"></i>
+                        <span id="sync-text">Synced</span>
+                    </div>
+                    <span id="admin-user-display" class="user-name">Responder</span>
+                    <button class="logout-btn" id="admin-logout" title="Logout"><i data-lucide="log-out"></i></button>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+
+                <!-- Admin Actions Top Bar -->
+                <div class="admin-top-bar card">
+                    <div class="stats-overview">
+                        <div class="stat-item"><span class="stat-value" id="stat-total">0</span><span
+                                class="stat-label">Total</span></div>
+                        <div class="stat-item critical"><span class="stat-value" id="stat-critical">0</span><span
+                                class="stat-label">Critical</span></div>
+                        <div class="stat-item pending"><span class="stat-value" id="stat-pending">0</span><span
+                                class="stat-label">Pending</span></div>
+                    </div>
+                    <div class="admin-actions">
+                        <button id="btn-broadcast" class="btn btn-warning"><i data-lucide="megaphone"></i> Broadcast
+                            Alert</button>
+                    </div>
+                </div>
+
+                <!-- Broadcast Modal (Hidden by default) -->
+                <div id="broadcast-modal" class="modal hidden">
+                    <div class="modal-content card">
+                        <div class="modal-header">
+                            <h3><i data-lucide="radio"></i> Send Local Alert</h3>
+                            <button id="close-modal-btn" class="icon-btn"><i data-lucide="x"></i></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="input-group">
+                                <label for="broadcast-msg">Alert Message</label>
+                                <textarea id="broadcast-msg" rows="3"
+                                    placeholder="E.g., Flood warning in Zone A. Move to higher ground."
+                                    required></textarea>
+                            </div>
+                            <button id="btn-send-alert" class="btn btn-warning w-full">Send Broadcast</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid admin-grid">
+                    <!-- Map Visualization -->
+                    <div class="card map-card">
+                        <div class="card-header">
+                            <h3><i data-lucide="map"></i> Incident Map</h3>
+                        </div>
+                        <div id="rescue-map" class="map-container"></div>
+                    </div>
+
+                    <!-- Requests List -->
+                    <div class="card list-card">
+                        <div class="card-header flex-between">
+                            <h3><i data-lucide="inbox"></i> Incoming Requests</h3>
+                            <div class="filter-group">
+                                <select id="filter-status">
+                                    <option value="active" selected>Active Requests</option>
+                                    <option value="all">All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="assigned">Assigned</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed History</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="requests-list" id="requests-list-container">
+                            <!-- JS will populate request cards here -->
+                            <div class="empty-state">No requests at the moment.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <!-- Application Logic -->
+    <script src="assets/js/app.js"></script>
+    
+    <!-- Service Worker Registration for Offline Support -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+
+</html>
